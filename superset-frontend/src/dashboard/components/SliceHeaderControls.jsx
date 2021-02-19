@@ -21,7 +21,7 @@ import PropTypes from 'prop-types';
 import moment from 'moment';
 import { styled, t } from '@superset-ui/core';
 import { Menu, NoAnimationDropdown } from 'src/common/components';
-import URLShortLinkModal from '../../components/URLShortLinkModal';
+import ShareMenuItems from 'src/dashboard/components/menu/ShareMenuItems';
 import downloadAsImage from '../../utils/downloadAsImage';
 import getDashboardUrl from '../util/getDashboardUrl';
 import { getActiveFilters } from '../util/activeDashboardFilters';
@@ -173,6 +173,7 @@ class SliceHeaderControls extends React.PureComponent {
       cachedDttm,
       updatedDttm,
       componentId,
+      addSuccessToast,
       addDangerToast,
       isFullSize,
     } = this.props;
@@ -193,13 +194,13 @@ class SliceHeaderControls extends React.PureComponent {
     // If all queries have same cache time we can unit them to one
     let refreshTooltip = [...new Set(refreshTooltipData)];
     refreshTooltip = refreshTooltip.map((item, index) => (
-      <div>
+      <div key={`tooltip-${index}`}>
         {refreshTooltip.length > 1
           ? `${t('Query')} ${index + 1}: ${item}`
           : item}
       </div>
     ));
-    const resizeLabel = isFullSize ? t('Minimize Chart') : t('Maximize Chart');
+    const resizeLabel = isFullSize ? t('Minimize chart') : t('Maximize chart');
     const menu = (
       <Menu
         onClick={this.handleMenuClick}
@@ -228,22 +229,22 @@ class SliceHeaderControls extends React.PureComponent {
 
         {this.props.supersetCanExplore && (
           <Menu.Item key={MENU_KEYS.EXPLORE_CHART}>
-            {t('View Chart in Explore')}
+            {t('View chart in Explore')}
           </Menu.Item>
         )}
 
-        <Menu.Item key={MENU_KEYS.SHARE_CHART}>
-          <URLShortLinkModal
-            url={getDashboardUrl(
-              window.location.pathname,
-              getActiveFilters(),
-              componentId,
-            )}
-            addDangerToast={addDangerToast}
-            title={t('Share chart')}
-            triggerNode={<span>{t('Share chart')}</span>}
-          />
-        </Menu.Item>
+        <ShareMenuItems
+          url={getDashboardUrl(
+            window.location.pathname,
+            getActiveFilters(),
+            componentId,
+          )}
+          copyMenuItemTitle={t('Copy chart URL')}
+          emailMenuItemTitle={t('Share chart by email')}
+          emailSubject={t('Superset chart')}
+          addSuccessToast={addSuccessToast}
+          addDangerToast={addDangerToast}
+        />
 
         <Menu.Item key={MENU_KEYS.RESIZE_LABEL}>{resizeLabel}</Menu.Item>
 

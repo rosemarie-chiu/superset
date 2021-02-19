@@ -52,7 +52,13 @@ const sortByStatus = (indicators: Indicator[]): Indicator[] => {
 };
 
 const mapStateToProps = (
-  { datasources, dashboardFilters, nativeFilters, charts }: any,
+  {
+    datasources,
+    dashboardFilters,
+    nativeFilters,
+    charts,
+    dashboardLayout: { present },
+  }: any,
   { chartId }: FiltersBadgeProps,
 ) => {
   const dashboardIndicators = selectIndicatorsForChart(
@@ -62,12 +68,18 @@ const mapStateToProps = (
     charts,
   );
 
-  const nativeIndicators = selectNativeIndicatorsForChart(nativeFilters);
+  const nativeIndicators = selectNativeIndicatorsForChart(
+    nativeFilters,
+    chartId,
+    charts,
+    present,
+  );
 
   const indicators = uniqWith(
     sortByStatus([...dashboardIndicators, ...nativeIndicators]),
     (ind1, ind2) =>
       ind1.column === ind2.column &&
+      ind1.name === ind2.name &&
       (ind1.status !== IndicatorStatus.Applied ||
         ind2.status !== IndicatorStatus.Applied),
   );

@@ -16,12 +16,11 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-import { getChartIdsInFilterScope } from '../../util/activeDashboardFilters';
-import { TIME_FILTER_MAP } from '../../../visualizations/FilterBox/FilterBox';
-import {
-  NativeFiltersState,
-  FilterState as NativeFilterState,
-} from '../nativeFilters/types';
+import { TIME_FILTER_MAP } from 'src/explore/constants';
+import { getChartIdsInFilterScope } from 'src/dashboard/util/activeDashboardFilters';
+import { NativeFiltersState } from 'src/dashboard/reducers/types';
+import { getTreeCheckedItems } from '../nativeFilters/FilterConfigModal/utils';
+import { Layout } from '../../types';
 
 export enum IndicatorStatus {
   Unset = 'UNSET',
@@ -115,8 +114,22 @@ const selectIndicatorsForChartFromFilter = (
     }));
 };
 
+const getAppliedColumns = (chart: any): Set<string> =>
+  new Set(
+    (chart?.queriesResponse?.[0]?.applied_filters || []).map(
+      (filter: any) => filter.column,
+    ),
+  );
+
+const getRejectedColumns = (chart: any): Set<string> =>
+  new Set(
+    (chart?.queriesResponse?.[0]?.rejected_filters || []).map(
+      (filter: any) => filter.column,
+    ),
+  );
+
 export type Indicator = {
-  column: string;
+  column?: string;
   name: string;
   value: string[];
   status: IndicatorStatus;
@@ -136,16 +149,9 @@ export const selectIndicatorsForChart = (
 
   // for now we only need to know which columns are compatible/incompatible,
   // so grab the columns from the applied/rejected filters
-  const appliedColumns: Set<string> = new Set(
-    (chart?.queriesResponse?.[0]?.applied_filters || []).map(
-      (filter: any) => filter.column,
-    ),
-  );
-  const rejectedColumns: Set<string> = new Set(
-    (chart?.queriesResponse?.[0]?.rejected_filters || []).map(
-      (filter: any) => filter.column,
-    ),
-  );
+  const appliedColumns = getAppliedColumns(chart);
+  const rejectedColumns = getRejectedColumns(chart);
+
   const indicators = Object.values(filters)
     .filter(filter => filter.chartId !== chartId)
     .reduce(
@@ -165,35 +171,55 @@ export const selectIndicatorsForChart = (
   return indicators;
 };
 
-const selectNativeIndicatorValue = (
-  filterState: NativeFilterState,
-): string[] => {
-  const filters = filterState?.extraFormData?.append_form_data?.filters;
-  if (filters?.length) {
-    const filter = filters[0];
-    if ('val' in filter) {
-      const val = filter.val as string | string[];
-      if (Array.isArray(val)) {
-        return val;
-      }
-      return [val];
-    }
-  }
-  return [];
-};
-
 export const selectNativeIndicatorsForChart = (
   nativeFilters: NativeFiltersState,
+  chartId: number,
+  charts: any,
+  dashboardLayout: Layout,
 ): Indicator[] => {
+  const chart = charts[chartId];
+
+  const appliedColumns = getAppliedColumns(chart);
+  const rejectedColumns = getRejectedColumns(chart);
+
+  const getStatus = (
+    value: string[],
+    isAffectedByScope: boolean,
+    column?: string,
+  ): IndicatorStatus => {
+    if (!isAffectedByScope) {
+      return IndicatorStatus.Unset;
+    }
+    if (!column) {
+      // Filter without datasource
+      return IndicatorStatus.Applied;
+    }
+    if (column && rejectedColumns.has(column))
+      return IndicatorStatus.Incompatible;
+    if (column && appliedColumns.has(column) && value.length > 0) {
+      return IndicatorStatus.Applied;
+    }
+    return IndicatorStatus.Unset;
+  };
+
   const indicators = Object.values(nativeFilters.filters).map(nativeFilter => {
-    const column = nativeFilter.targets[0].column.name;
+    const isAffectedByScope = getTreeCheckedItems(
+      nativeFilter.scope,
+      dashboardLayout,
+    ).some(
+      layoutItem => dashboardLayout[layoutItem]?.meta?.chartId === chartId,
+    );
+    const column = nativeFilter.targets[0]?.column?.name;
     const filterState = nativeFilters.filtersState[nativeFilter.id];
-    const value = selectNativeIndicatorValue(filterState);
+    let value = filterState?.currentState?.value ?? [];
+    if (!Array.isArray(value)) {
+      value = [value];
+    }
     return {
       column,
       name: nativeFilter.name,
       path: [nativeFilter.id],
-      status: value.length ? IndicatorStatus.Applied : IndicatorStatus.Unset,
+      status: getStatus(value, isAffectedByScope, column),
       value,
     };
   });

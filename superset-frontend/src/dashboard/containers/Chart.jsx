@@ -26,7 +26,7 @@ import {
 } from '../actions/dashboardState';
 import { updateComponents } from '../actions/dashboardLayout';
 import { changeFilter } from '../actions/dashboardFilters';
-import { addDangerToast } from '../../messageToasts/actions';
+import { addSuccessToast, addDangerToast } from '../../messageToasts/actions';
 import { refreshChart } from '../../chart/chartAction';
 import { logEvent } from '../../logger/actions';
 import {
@@ -43,6 +43,7 @@ function mapStateToProps(
     charts: chartQueries,
     dashboardInfo,
     dashboardState,
+    dashboardLayout,
     datasources,
     sliceEntities,
     nativeFilters,
@@ -57,7 +58,9 @@ function mapStateToProps(
 
   // note: this method caches filters if possible to prevent render cascades
   const formData = getFormDataWithExtraFilters({
+    layout: dashboardLayout.present,
     chart,
+    charts: chartQueries,
     filters: getAppliedFilterValues(id),
     colorScheme,
     colorNamespace,
@@ -86,6 +89,7 @@ function mapDispatchToProps(dispatch) {
   return bindActionCreators(
     {
       updateComponents,
+      addSuccessToast,
       addDangerToast,
       toggleExpandSlice,
       changeFilter,

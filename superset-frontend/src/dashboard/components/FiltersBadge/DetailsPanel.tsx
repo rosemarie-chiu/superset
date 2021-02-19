@@ -51,7 +51,7 @@ const Indicator = ({
       <ItemIcon>
         <SearchOutlined />
       </ItemIcon>
-      {name.toUpperCase()}
+      {name}
       {value.length ? ': ' : ''}
     </Title>
     <FilterValue>{value.length ? value.join(', ') : ''}</FilterValue>
@@ -102,6 +102,9 @@ const DetailsPanelPopover = ({
       setActivePanels(panels);
     }
   }
+
+  const indicatorKey = (indicator: Indicator): string =>
+    `${indicator.column} - ${indicator.name}`;
 
   const content = (
     <Panel>
@@ -173,7 +176,7 @@ const DetailsPanelPopover = ({
               <Indent>
                 {appliedIndicators.map(indicator => (
                   <Indicator
-                    key={indicator.column}
+                    key={indicatorKey(indicator)}
                     indicator={indicator}
                     onClick={onHighlightFilterSource}
                   />
@@ -197,7 +200,7 @@ const DetailsPanelPopover = ({
               <Indent>
                 {incompatibleIndicators.map(indicator => (
                   <Indicator
-                    key={indicator.column}
+                    key={indicatorKey(indicator)}
                     indicator={indicator}
                     onClick={onHighlightFilterSource}
                   />
@@ -219,7 +222,7 @@ const DetailsPanelPopover = ({
               <Indent>
                 {unsetIndicators.map(indicator => (
                   <Indicator
-                    key={indicator.column}
+                    key={indicatorKey(indicator)}
                     indicator={indicator}
                     onClick={onHighlightFilterSource}
                   />

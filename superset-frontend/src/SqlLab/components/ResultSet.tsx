@@ -17,7 +17,8 @@
  * under the License.
  */
 import React, { CSSProperties } from 'react';
-import { Alert, ButtonGroup } from 'react-bootstrap';
+import { Alert } from 'react-bootstrap';
+import ButtonGroup from 'src/components/ButtonGroup';
 import ProgressBar from 'src/common/components/ProgressBar';
 import moment from 'moment';
 import { RadioChangeEvent } from 'antd/lib/radio';
@@ -158,9 +159,11 @@ export default class ResultSet extends React.PureComponent<
     this.handleExploreBtnClick = this.handleExploreBtnClick.bind(this);
   }
 
-  componentDidMount() {
+  async componentDidMount() {
     // only do this the first time the component is rendered/mounted
     this.reRunQueryIfSessionTimeoutErrorOnMount();
+    const userDatasetsOwned = await this.getUserDatasets();
+    this.setState({ userDatasetOptions: userDatasetsOwned });
   }
 
   UNSAFE_componentWillReceiveProps(nextProps: ResultSetProps) {
@@ -295,7 +298,7 @@ export default class ResultSet extends React.PureComponent<
     });
   };
 
-  handleSaveDatasetModalSearch = async (searchText: string) => {
+  getUserDatasets = async (searchText = '') => {
     // Making sure that autocomplete input has a value before rendering the dropdown
     // Transforming the userDatasetsOwned data for SaveModalComponent)
     const appContainer = document.getElementById('app');
@@ -326,15 +329,18 @@ export default class ResultSet extends React.PureComponent<
         endpoint: '/api/v1/dataset',
       })(`q=${queryParams}`);
 
-      const userDatasetsOwned = response.result.map(
-        (r: { table_name: string; id: number }) => ({
-          value: r.table_name,
-          datasetId: r.id,
-        }),
-      );
-
-      this.setState({ userDatasetOptions: userDatasetsOwned });
+      return response.result.map((r: { table_name: string; id: number }) => ({
+        value: r.table_name,
+        datasetId: r.id,
+      }));
     }
+
+    return null;
+  };
+
+  handleSaveDatasetModalSearch = async (searchText: string) => {
+    const userDatasetsOwned = await this.getUserDatasets(searchText);
+    this.setState({ userDatasetOptions: userDatasetsOwned });
   };
 
   handleFilterAutocompleteOption = (
@@ -466,7 +472,7 @@ export default class ResultSet extends React.PureComponent<
               onChange={this.changeSearch}
               value={this.state.searchText}
               className="form-control input-sm"
-              placeholder={t('Filter Results')}
+              placeholder={t('Filter results')}
             />
           )}
         </div>
@@ -498,7 +504,7 @@ export default class ResultSet extends React.PureComponent<
       return (
         <div className="result-set-error-message">
           <ErrorMessageWithStackTrace
-            title={t('Database Error')}
+            title={t('Database error')}
             error={query?.errors?.[0]}
             subtitle={<MonospaceDiv>{query.errorMessage}</MonospaceDiv>}
             copyText={query.errorMessage || undefined}
@@ -580,7 +586,7 @@ export default class ResultSet extends React.PureComponent<
       if (query.isDataPreview) {
         return (
           <Button
-            buttonSize="sm"
+            buttonSize="small"
             className="fetch"
             buttonStyle="primary"
             onClick={() =>
@@ -597,12 +603,12 @@ export default class ResultSet extends React.PureComponent<
       if (query.resultsKey) {
         return (
           <Button
-            buttonSize="sm"
+            buttonSize="small"
             className="fetch"
             buttonStyle="primary"
             onClick={() => this.fetchResults(query)}
           >
-            {t('Refetch Results')}
+            {t('Refetch results')}
           </Button>
         );
       }
@@ -623,7 +629,7 @@ export default class ResultSet extends React.PureComponent<
           buttonSize="small"
           onClick={() => query.trackingUrl && window.open(query.trackingUrl)}
         >
-          {t('Track Job')}
+          {t('Track job')}
         </Button>
       );
     }
