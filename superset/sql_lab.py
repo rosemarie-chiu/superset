@@ -36,7 +36,7 @@ from superset.dataframe import df_to_records
 from superset.db_engine_specs import BaseEngineSpec
 from superset.extensions import celery_app
 from superset.models.core import Database
-from superset.models.sql_lab import Query
+from superset.models.sql_lab import Query, LimitingFactor
 from superset.result_set import SupersetResultSet
 from superset.sql_parse import CtasMethod, ParsedQuery
 from superset.utils.celery import session_scope
@@ -206,8 +206,9 @@ def execute_sql_statement(
         if SQL_MAX_ROW and (not query.limit or query.limit > SQL_MAX_ROW):
             query.limit = SQL_MAX_ROW
         if query.limit:
-            #We are fetching one more than the requested limit in order to test whether there are more rows than the limit. 
-            sql = database.apply_limit_to_sql(sql, query.limit + 1)
+        # We are fetching one more than the requested limit in order to test whether there are more rows than the limit. 
+        # Later, the extra row will be dropped before sending the results back to the user. 
+          sql = database.apply_limit_to_sql(sql, query.limit + 1)
 
     # Hook to allow environment-specific mutation (usually comments) to the SQL
     sql = SQL_QUERY_MUTATOR(sql, user_name, security_manager, database)

@@ -100,6 +100,7 @@ from superset.sql_parse import CtasMethod, ParsedQuery, Table
 from superset.sql_validators import get_validator_by_name
 from superset.tasks.async_queries import load_explore_json_into_cache
 from superset.typing import FlaskResponse
+from superset.models.sql_lab import LimitingFactor
 from superset.utils import core as utils
 from superset.utils.async_query_manager import AsyncQueryTokenException
 from superset.utils.cache import etag_cache
@@ -2579,12 +2580,14 @@ class Superset(BaseSupersetView):  # pylint: disable=too-many-public-methods
         if not (config.get("SQLLAB_CTAS_NO_LIMIT") and select_as_cta):
             # set LIMIT after template processing
             limits = [mydb.db_engine_spec.get_limit_from_sql(rendered_query), limit]
-            if limits[0] == limits[1]:
-                query.limiting_factor = LimitingFactor.QUERY_AND_DROPDOWN
-            elif limits[0] > limits[1]:
+            if limits[0] is None and limits[1] is None:
+                query.limiting_factor = LimitingFactor.NOT_LIMITED
+            elif limits[0] is None or limits[0] > limits[1]:
                 query.limiting_factor = LimitingFactor.DROPDOWN
-            else:
+            elif limits[1] is None or limits[1] > limits[0]:
                 query.limiting_factor = LimitingFactor.QUERY
+            else:
+                query.limiting_factor = LimitingFactor.QUERY_AND_DROPDOWN
             query.limit = min(lim for lim in limits if lim is not None)
 
         # Flag for whether or not to expand data

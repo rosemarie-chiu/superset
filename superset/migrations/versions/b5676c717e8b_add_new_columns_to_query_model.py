@@ -47,3 +47,6 @@ def upgrade():
 def downgrade():
     with op.batch_alter_table("query") as batch_op:
         batch_op.drop_column("limiting_factor")
+        bind = op.get_bind()
+        limiting_factor = postgresql.ENUM("DROPDOWN", "QUERY", "NOT_LIMITED", "QUERY_AND_DROPDOWN", "UNKNOWN", name="limitingfactor")
+        limiting_factor.drop(bind)

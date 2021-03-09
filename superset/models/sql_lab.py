@@ -129,7 +129,6 @@ class Query(Model, ExtraJSONMixin):
             "id": self.client_id,
             "queryId": self.id,
             "limit": self.limit,
-            "wasLimited": self.was_limited,
             "limitingFactor": self.limiting_factor,
             "progress": self.progress,
             "rows": self.rows,
