@@ -19,9 +19,9 @@ from datetime import datetime, timedelta
 from typing import Iterator
 
 import croniter
+from celery.exceptions import SoftTimeLimitExceeded
 from dateutil import parser
 
-from celery.exceptions import SoftTimeLimitExceeded
 from superset import app
 from superset.commands.exceptions import CommandException
 from superset.extensions import celery_app

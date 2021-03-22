@@ -161,7 +161,7 @@ def get_sql_results(  # pylint: disable=too-many-arguments
             )
         except SoftTimeLimitExceeded as ex:
             logger.error("Query %d: Time limit exceeded", query_id)
-            logger.debug("Query %d: %s", query.id, ex)
+            logger.debug("Query %d: %s", query_id, ex)
             raise SqlLabTimeoutException(
                 "SQL Lab timeout. This environment's policy is to kill queries "
                 "after {} seconds.".format(SQLLAB_TIMEOUT)

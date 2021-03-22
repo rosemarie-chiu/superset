@@ -147,7 +147,7 @@ class AlertCommand(BaseCommand):
             )
             return self._report_schedule.database.get_df(limited_rendered_sql)
         except SoftTimeLimitExceeded as ex:
-            logger.error("A timeout occurred while executing the alert query: %s",  ex)
+            logger.error("A timeout occurred while executing the alert query: %s", ex)
             raise AlertQueryTimeout()
         except Exception as ex:
             raise AlertQueryError(message=str(ex))

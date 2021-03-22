@@ -18,8 +18,8 @@
 import logging
 from typing import Any, cast, Dict, Optional
 
-from flask import current_app
 from celery.exceptions import SoftTimeLimitExceeded
+from flask import current_app
 
 from superset import app
 from superset.exceptions import SupersetVizException
@@ -37,9 +37,9 @@ query_timeout = current_app.config[
 def load_chart_data_into_cache(
     job_metadata: Dict[str, Any], form_data: Dict[str, Any],
 ) -> None:
-    from superset.charts.commands.data import (
+    from superset.charts.commands.data import (  # load here due to circular imports
         ChartDataCommand,
-    )  # load here due to circular imports
+    )
 
     with app.app_context():  # type: ignore
         try:
@@ -67,7 +67,7 @@ def load_chart_data_into_cache(
 
 
 @celery_app.task(name="load_explore_json_into_cache", soft_time_limit=query_timeout)
-def load_explore_json_into_cache(
+def load_explore_json_into_cache(  # pylint: disable-msg=too-many-locals
     job_metadata: Dict[str, Any],
     form_data: Dict[str, Any],
     response_type: Optional[str] = None,
