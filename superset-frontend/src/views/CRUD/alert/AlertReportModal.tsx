@@ -391,8 +391,10 @@ type NotificationSetting = {
   method?: NotificationMethod;
   recipients: string;
   options: NotificationMethod[];
-  reportFormat: 'PNG' | 'PDF';
+  format: 'PNG' | 'PDF';
 };
+
+const DEFAULT_NOTIFICATION_FORMAT = 'PNG';
 
 interface NotificationMethodProps {
   setting?: NotificationSetting | null;
@@ -407,31 +409,26 @@ const NotificationMethod: FunctionComponent<NotificationMethodProps> = ({
   onUpdate,
   onRemove,
 }) => {
-  const { method, recipients, options, reportFormat } = setting || {};
-  const [recipientValue, setRecipientValue] = useState<string>(
-    recipients || '',
-  );
-  const [formatValue, setFormatValue] = useState<string>(
-    reportFormat || 'PNG',
-  );
-
   if (!setting) {
     return null;
   }
+  const { method, recipients, options, format } = setting;
+  const [recipientValue, setRecipientValue] = useState<string>(recipients);
+  const [formatValue, setFormatValue] = useState<string>(format);
 
   const onFormatChange = (event: any) => {
     const { target } = event;
-    setFormatValue(target.value)
+    setFormatValue(target.value);
 
     if (onUpdate) {
       const updatedSetting = {
         ...setting,
-        reportFormat: target.value,
+        format: target.value,
       };
 
       onUpdate(index, updatedSetting);
     }
-  }
+  };
 
   const onMethodChange = (method: NotificationMethod) => {
     // Since we're swapping the method, reset the recipients
@@ -504,7 +501,7 @@ const NotificationMethod: FunctionComponent<NotificationMethodProps> = ({
       </div>
       {method !== undefined ? (
         <StyledInputContainer>
-          <div className="control-label">{t("format")}</div>
+          <div className="control-label">{t('format')}</div>
           <Radio.Group onChange={onFormatChange} value={formatValue}>
             <Radio value="PNG">PNG</Radio>
             <Radio value="PDF">PDF</Radio>
@@ -563,6 +560,7 @@ const AlertReportModal: FunctionComponent<AlertReportModalProps> = ({
 
     settings.push({
       recipients: '',
+      format: DEFAULT_NOTIFICATION_FORMAT,
       options: NOTIFICATION_METHODS, // TODO: Need better logic for this
     });
 
@@ -622,7 +620,7 @@ const AlertReportModal: FunctionComponent<AlertReportModalProps> = ({
         recipients.push({
           recipient_config_json: {
             target: setting.recipients,
-            format: setting.reportFormat,
+            format: setting.format,
           },
           type: setting.method,
         });
