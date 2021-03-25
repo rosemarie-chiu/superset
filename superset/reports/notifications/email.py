@@ -19,7 +19,7 @@ import json
 import logging
 from dataclasses import dataclass
 from email.utils import make_msgid, parseaddr
-from typing import Dict, Optional
+from typing import Any, Dict, Optional
 
 from flask_babel import gettext as __
 
@@ -35,6 +35,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class EmailContent:
     body: str
+    data: Optional[Dict[str, Any]] = None
     images: Optional[Dict[str, bytes]] = None
 
 
@@ -63,6 +64,22 @@ class EmailNotification(BaseNotification):  # pylint: disable=too-few-public-met
             return EmailContent(body=self._error_template(self._content.text))
         # Get the domain from the 'From' address ..
         # and make a message id without the < > in the end
+        if self._content.data:
+            domain = self._get_smtp_domain()
+            msgid = make_msgid(domain)[1:-1]
+
+            data = {
+                __("%(name)s.csv", name=self._content.name): self._content.data.file
+            }
+            body = __(
+                """
+                <b><a href="%(url)s">Explore in Superset</a></b><p></p>
+                <img src="cid:%(msgid)s">
+                """,
+                url=self._content.data.url,
+                msgid=msgid,
+            )
+            return EmailContent(body=body, data=data)
         if self._content.screenshot:
             domain = self._get_smtp_domain()
             msgid = make_msgid(domain)[1:-1]
@@ -100,7 +117,7 @@ class EmailNotification(BaseNotification):  # pylint: disable=too-few-public-met
                 content.body,
                 app.config,
                 files=[],
-                data=None,
+                data=content.data,
                 images=content.images,
                 bcc="",
                 mime_subtype="related",

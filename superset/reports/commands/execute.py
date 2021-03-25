@@ -15,6 +15,7 @@
 # specific language governing permissions and limitations
 # under the License.
 import logging
+import urllib.request
 from datetime import datetime, timedelta
 from typing import Any, List, Optional
 from uuid import UUID
@@ -52,7 +53,11 @@ from superset.reports.dao import (
     ReportScheduleDAO,
 )
 from superset.reports.notifications import create_notification
-from superset.reports.notifications.base import NotificationContent, ScreenshotData
+from superset.reports.notifications.base import (
+    NotificationContent,
+    ScreenshotData,
+    CsvData,
+)
 from superset.reports.notifications.exceptions import NotificationError
 from superset.utils.celery import session_scope
 from superset.utils.screenshots import (
@@ -189,6 +194,18 @@ class BaseReportState:
         if not image_data:
             raise ReportScheduleScreenshotFailedError()
         return ScreenshotData(url=image_url, image=image_data)
+
+    def _get_csv_data(self) -> CsvData:
+        url = self._get_url(standalone="true", csv="true")
+        chart_url = self._get_url(user_friendly=True)
+        try:
+            opener = urllib.request.build_opener()
+            response = opener.open(url)
+            content = response.read()
+        except SoftTimeLimitExceeded:
+            raise ReportScheduleScreenshotTimeout()
+
+        return CsvData(url=chart_url, file=content)
 
     def _get_notification_content(self) -> NotificationContent:
         """

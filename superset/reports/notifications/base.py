@@ -28,9 +28,16 @@ class ScreenshotData:
 
 
 @dataclass
+class CsvData:
+    url: str  # url to chart/dashboard for this csv file
+    file: bytes  # bytes for the csv
+
+
+@dataclass
 class NotificationContent:
     name: str
     screenshot: Optional[ScreenshotData] = None
+    data: Optional[CsvData] = None
     text: Optional[str] = None
 
 

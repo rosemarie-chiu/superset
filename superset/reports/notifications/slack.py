@@ -66,16 +66,27 @@ class SlackNotification(BaseNotification):  # pylint: disable=too-few-public-met
                 name=self._content.name,
                 url=self._content.screenshot.url,
             )
+        if self._content.data:
+            return __(
+                """
+                *%(name)s*\n
+                <%(url)s|Explore in Superset>
+                """,
+                name=self._content.name,
+                url=self._content.data.url,
+            )
         return self._error_template(self._content.name, "Unexpected missing screenshot")
 
-    def _get_inline_screenshot(self) -> Optional[Union[str, IOBase, bytes]]:
+    def _get_inline_file(self) -> Optional[Union[str, IOBase, bytes]]:
+        if self._content.data:
+            return self._content.data.file
         if self._content.screenshot:
             return self._content.screenshot.image
         return None
 
     @retry(SlackApiError, delay=10, backoff=2, tries=5)
     def send(self) -> None:
-        file = self._get_inline_screenshot()
+        file = self._get_inline_file()
         channel = self._get_channel()
         body = self._get_body()
         try:
@@ -86,7 +97,10 @@ class SlackNotification(BaseNotification):  # pylint: disable=too-few-public-met
             # files_upload returns SlackResponse as we run it in sync mode.
             if file:
                 client.files_upload(
-                    channels=channel, file=file, initial_comment=body, title="subject",
+                    channels=channel,
+                    file=file,
+                    initial_comment=body,
+                    title="subject",
                 )
             else:
                 client.chat_postMessage(channel=channel, text=body)
