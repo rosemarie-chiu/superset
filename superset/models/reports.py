@@ -70,8 +70,8 @@ class ReportState(str, enum.Enum):
 
 
 class ReportEmailFormat(str, enum.Enum):
-    VISUALIZATION = "Visualization"
-    DATA = "Raw data"
+    VISUALIZATION = "PNG"
+    DATA = "CSV"
 
 
 report_schedule_user = Table(

@@ -24,7 +24,7 @@ from typing import Any, Dict, Optional
 from flask_babel import gettext as __
 
 from superset import app
-from superset.models.reports import ReportRecipientType
+from superset.models.reports import ReportEmailFormat, ReportRecipientType
 from superset.reports.notifications.base import BaseNotification
 from superset.reports.notifications.exceptions import NotificationError
 from superset.utils.core import send_email_smtp
@@ -59,15 +59,17 @@ class EmailNotification(BaseNotification):  # pylint: disable=too-few-public-met
             text=text,
         )
 
+    def _get_format(self) -> str:
+        return json.loads(self._recipient.recipient_config_json)["report_format"]
+
     def _get_content(self) -> EmailContent:
         if self._content.text:
             return EmailContent(body=self._error_template(self._content.text))
         # Get the domain from the 'From' address ..
         # and make a message id without the < > in the end
-        if self._content.data:
-            domain = self._get_smtp_domain()
-            msgid = make_msgid(domain)[1:-1]
-
+        domain = self._get_smtp_domain()
+        msgid = make_msgid(domain)[1:-1]
+        if self._content.data and self._get_format() == ReportEmailFormat.DATA:
             data = {
                 __("%(name)s.csv", name=self._content.name): self._content.data.file
             }
@@ -80,10 +82,10 @@ class EmailNotification(BaseNotification):  # pylint: disable=too-few-public-met
                 msgid=msgid,
             )
             return EmailContent(body=body, data=data)
-        if self._content.screenshot:
-            domain = self._get_smtp_domain()
-            msgid = make_msgid(domain)[1:-1]
-
+        if (
+            self._content.screenshot
+            and self._get_format() == ReportEmailFormat.VISUALIZATION
+        ):
             image = {msgid: self._content.screenshot.image}
             body = __(
                 """

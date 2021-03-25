@@ -20,6 +20,7 @@ from datetime import datetime, timedelta
 from typing import Any, List, Optional
 from uuid import UUID
 
+import simplejson as json
 from celery.exceptions import SoftTimeLimitExceeded
 from flask_appbuilder.security.sqla.models import User
 from sqlalchemy.orm import Session
@@ -27,6 +28,7 @@ from sqlalchemy.orm import Session
 from superset import app
 from superset.commands.base import BaseCommand
 from superset.commands.exceptions import CommandException
+from superset.extensions import machine_auth_provider_factory
 from superset.models.reports import (
     ReportEmailFormat,
     ReportExecutionLog,
@@ -38,6 +40,7 @@ from superset.reports.commands.alert import AlertCommand
 from superset.reports.commands.exceptions import (
     ReportScheduleAlertEndGracePeriodError,
     ReportScheduleAlertGracePeriodError,
+    ReportScheduleCsvFailedError,
     ReportScheduleExecuteUnexpectedError,
     ReportScheduleNotFoundError,
     ReportScheduleNotificationError,
@@ -55,12 +58,13 @@ from superset.reports.dao import (
 )
 from superset.reports.notifications import create_notification
 from superset.reports.notifications.base import (
+    CsvData,
     NotificationContent,
     ScreenshotData,
-    CsvData,
 )
 from superset.reports.notifications.exceptions import NotificationError
 from superset.utils.celery import session_scope
+from superset.utils.csv import get_chart_csv_data
 from superset.utils.screenshots import (
     BaseScreenshot,
     ChartScreenshot,
@@ -136,11 +140,19 @@ class BaseReportState:
         self._session.add(log)
         self._session.commit()
 
-    def _get_url(self, user_friendly: bool = False, **kwargs: Any) -> str:
+    def _get_url(
+        self, user_friendly: bool = False, csv: bool = False, **kwargs: Any
+    ) -> str:
         """
         Get the url for this report schedule: chart or dashboard
         """
         if self._report_schedule.chart:
+            if csv:
+                return get_url_path(
+                    "Superset.explore_json",
+                    csv="true",
+                    form_data=json.dumps({"slice_id": self._report_schedule.chart_id}),
+                )
             return get_url_path(
                 "Superset.slice",
                 user_friendly=user_friendly,
@@ -202,16 +214,20 @@ class BaseReportState:
         return ScreenshotData(url=image_url, image=image_data)
 
     def _get_csv_data(self) -> CsvData:
-        url = self._get_url(standalone="true", csv="true")
+        url = self._get_url(csv=True)
         chart_url = self._get_url(user_friendly=True)
+        auth_cookies = machine_auth_provider_factory.instance.get_auth_cookies(
+            self._get_screenshot_user()
+        )
         try:
-            opener = urllib.request.build_opener()
-            response = opener.open(url)
-            content = response.read()
+            csv_data = get_chart_csv_data(url, auth_cookies)
         except SoftTimeLimitExceeded:
             raise ReportScheduleScreenshotTimeout()
-
-        return CsvData(url=chart_url, file=content)
+        except Exception as ex:
+            raise ReportScheduleCsvFailedError(f"Failed generating csv {str(ex)}")
+        if not csv_data:
+            raise ReportScheduleCsvFailedError()
+        return CsvData(url=chart_url, file=csv_data)
 
     def _get_notification_content(self) -> NotificationContent:
         """
@@ -220,21 +236,19 @@ class BaseReportState:
         :raises: ReportScheduleScreenshotFailedError
         """
         screenshot_data = self._get_screenshot()
+        csv_data = None
         if self._report_schedule.chart:
             name = (
                 f"{self._report_schedule.name}: "
                 f"{self._report_schedule.chart.slice_name}"
             )
+            csv_data = self._get_csv_data()
         else:
             name = (
                 f"{self._report_schedule.name}: "
                 f"{self._report_schedule.dashboard.dashboard_title}"
             )
-        if self._report_schedule.email_format == ReportEmailFormat.VISUALIZATION:
-            screenshot_data = self._get_screenshot()
-            return NotificationContent(name=name, screenshot=screenshot_data)
-        csv_data = self._get_csv_data()
-        return NotificationContent(name=name, data=csv_data)
+        return NotificationContent(name=name, screenshot=screenshot_data, data=csv_data)
 
     def _send(self, notification_content: NotificationContent) -> None:
         """

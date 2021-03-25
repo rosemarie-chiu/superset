@@ -26,7 +26,7 @@ from slack import WebClient
 from slack.errors import SlackApiError, SlackClientError
 
 from superset import app
-from superset.models.reports import ReportRecipientType
+from superset.models.reports import ReportEmailFormat, ReportRecipientType
 from superset.reports.notifications.base import BaseNotification
 from superset.reports.notifications.exceptions import NotificationError
 
@@ -43,6 +43,9 @@ class SlackNotification(BaseNotification):  # pylint: disable=too-few-public-met
     def _get_channel(self) -> str:
         return json.loads(self._recipient.recipient_config_json)["target"]
 
+    def _get_format(self) -> ReportEmailFormat:
+        return json.loads(self._recipient.recipient_config_json)["report_format"]
+
     @staticmethod
     def _error_template(name: str, text: str) -> str:
         return __(
@@ -57,38 +60,42 @@ class SlackNotification(BaseNotification):  # pylint: disable=too-few-public-met
     def _get_body(self) -> str:
         if self._content.text:
             return self._error_template(self._content.name, self._content.text)
-        if self._content.screenshot:
+
+        if (
+            self._content.screenshot
+            and self._get_format() == ReportEmailFormat.VISUALIZATION
+        ):
+            url = self._content.screenshot.url
+        elif self._content.data and self._get_format() == ReportEmailFormat.DATA:
+            url = self._content.data.url
+        if (self._content.data or self._content.screenshot) and url:
             return __(
                 """
                 *%(name)s*\n
                 <%(url)s|Explore in Superset>
                 """,
                 name=self._content.name,
-                url=self._content.screenshot.url,
-            )
-        if self._content.data:
-            return __(
-                """
-                *%(name)s*\n
-                <%(url)s|Explore in Superset>
-                """,
-                name=self._content.name,
-                url=self._content.data.url,
+                url=url,
             )
         return self._error_template(self._content.name, "Unexpected missing screenshot")
 
     def _get_inline_file(self) -> Optional[Union[str, IOBase, bytes]]:
-        if self._content.data:
-            return self._content.data.file
-        if self._content.screenshot:
+        if (
+            self._content.screenshot
+            and self._get_format() == ReportEmailFormat.VISUALIZATION
+        ):
             return self._content.screenshot.image
+        if self._content.data and self._get_format() == ReportEmailFormat.DATA:
+            return self._content.data.file
         return None
 
     @retry(SlackApiError, delay=10, backoff=2, tries=5)
     def send(self) -> None:
         file = self._get_inline_file()
+        title = self._content.name
         channel = self._get_channel()
         body = self._get_body()
+        file_type = self._get_format().lower()
         try:
             token = app.config["SLACK_API_TOKEN"]
             if callable(token):
@@ -100,7 +107,8 @@ class SlackNotification(BaseNotification):  # pylint: disable=too-few-public-met
                     channels=channel,
                     file=file,
                     initial_comment=body,
-                    title="subject",
+                    title=title,
+                    filetype=file_type,
                 )
             else:
                 client.chat_postMessage(channel=channel, text=body)

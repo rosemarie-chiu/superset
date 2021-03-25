@@ -391,7 +391,7 @@ type NotificationSetting = {
   method?: NotificationMethod;
   recipients: string;
   options: NotificationMethod[];
-  format: 'PNG' | 'PDF';
+  format: 'PNG' | 'CSV';
 };
 
 const DEFAULT_NOTIFICATION_FORMAT = 'PNG';
@@ -401,11 +401,13 @@ interface NotificationMethodProps {
   index: number;
   onUpdate?: (index: number, updatedSetting: NotificationSetting) => void;
   onRemove?: (index: number) => void;
+  contentType: string;
 }
 
 const NotificationMethod: FunctionComponent<NotificationMethodProps> = ({
   setting = null,
   index,
+  contentType,
   onUpdate,
   onRemove,
 }) => {
@@ -501,11 +503,15 @@ const NotificationMethod: FunctionComponent<NotificationMethodProps> = ({
       </div>
       {method !== undefined ? (
         <StyledInputContainer>
-          <div className="control-label">{t('format')}</div>
-          <Radio.Group onChange={onFormatChange} value={formatValue}>
-            <Radio value="PNG">PNG</Radio>
-            <Radio value="PDF">PDF</Radio>
-          </Radio.Group>
+          {contentType === 'chart' && (
+            <>
+              <div className="control-label">{t('format')}</div>
+              <Radio.Group onChange={onFormatChange} value={formatValue}>
+                <Radio value="PNG">PNG</Radio>
+                <Radio value="CSV">CSV</Radio>
+              </Radio.Group>
+            </>
+          )}
           <div className="control-label">{t(method)}</div>
           <div className="input-container">
             <textarea
@@ -620,7 +626,7 @@ const AlertReportModal: FunctionComponent<AlertReportModalProps> = ({
         recipients.push({
           recipient_config_json: {
             target: setting.recipients,
-            format: setting.format,
+            report_format: contentType === 'chart' ? setting.format : 'PNG',
           },
           type: setting.method,
         });
@@ -1008,15 +1014,19 @@ const AlertReportModal: FunctionComponent<AlertReportModalProps> = ({
   useEffect(() => {
     if (resource) {
       // Add notification settings
-      const settings = (resource.recipients || []).map(setting => ({
-        method: setting.type as NotificationMethod,
-        // @ts-ignore: Type not assignable
-        recipients:
+      const settings = (resource.recipients || []).map(setting => {
+        const config =
           typeof setting.recipient_config_json === 'string'
-            ? (JSON.parse(setting.recipient_config_json) || {}).target
-            : setting.recipient_config_json,
-        options: NOTIFICATION_METHODS as NotificationMethod[], // Need better logic for this
-      }));
+            ? JSON.parse(setting.recipient_config_json)
+            : {};
+        return {
+          method: setting.type as NotificationMethod,
+          // @ts-ignore: Type not assignable
+          recipients: config.target || setting.recipient_config_json,
+          options: NOTIFICATION_METHODS as NotificationMethod[], // Need better logic for this
+          format: resource.chart ? config.report_format || 'PNG' : 'PNG',
+        };
+      });
 
       setNotificationSettings(settings);
       setNotificationAddState(
@@ -1414,6 +1424,7 @@ const AlertReportModal: FunctionComponent<AlertReportModalProps> = ({
                 index={i}
                 onUpdate={updateNotificationSetting}
                 onRemove={removeNotificationSetting}
+                contentType={contentType}
               />
             ))}
             <NotificationMethodAdd
