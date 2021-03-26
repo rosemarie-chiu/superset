@@ -70,9 +70,11 @@ class EmailNotification(BaseNotification):  # pylint: disable=too-few-public-met
             image = {msgid: self._content.screenshot.image}
             body = __(
                 """
+                <p>%(description)s</p>
                 <b><a href="%(url)s">Explore in Superset</a></b><p></p>
                 <img src="cid:%(msgid)s">
                 """,
+                description=self._content.description,
                 url=self._content.screenshot.url,
                 msgid=msgid,
             )

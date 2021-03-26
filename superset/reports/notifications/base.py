@@ -32,6 +32,7 @@ class NotificationContent:
     name: str
     screenshot: Optional[ScreenshotData] = None
     text: Optional[str] = None
+    description: Optional[str] = ''
 
 
 class BaseNotification:  # pylint: disable=too-few-public-methods
