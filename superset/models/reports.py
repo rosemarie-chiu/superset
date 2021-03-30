@@ -69,7 +69,7 @@ class ReportState(str, enum.Enum):
     GRACE = "On Grace"
 
 
-class ReportEmailFormat(str, enum.Enum):
+class ReportDataFormat(str, enum.Enum):
     VISUALIZATION = "PNG"
     DATA = "CSV"
 

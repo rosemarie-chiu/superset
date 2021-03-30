@@ -30,7 +30,7 @@ from superset.commands.base import BaseCommand
 from superset.commands.exceptions import CommandException
 from superset.extensions import machine_auth_provider_factory
 from superset.models.reports import (
-    ReportEmailFormat,
+    ReportDataFormat,
     ReportExecutionLog,
     ReportSchedule,
     ReportScheduleType,
@@ -214,11 +214,12 @@ class BaseReportState:
         return ScreenshotData(url=image_url, image=image_data)
 
     def _get_csv_data(self) -> CsvData:
-        url = self._get_url(csv=True)
+        if self._report_schedule.chart:
+            url = self._get_url(csv=True)
+            auth_cookies = machine_auth_provider_factory.instance.get_auth_cookies(
+                self._get_screenshot_user()
+            )
         chart_url = self._get_url(user_friendly=True)
-        auth_cookies = machine_auth_provider_factory.instance.get_auth_cookies(
-            self._get_screenshot_user()
-        )
         try:
             csv_data = get_chart_csv_data(url, auth_cookies)
         except SoftTimeLimitExceeded:

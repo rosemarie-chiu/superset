@@ -26,7 +26,7 @@ from slack import WebClient
 from slack.errors import SlackApiError, SlackClientError
 
 from superset import app
-from superset.models.reports import ReportEmailFormat, ReportRecipientType
+from superset.models.reports import ReportDataFormat, ReportRecipientType
 from superset.reports.notifications.base import BaseNotification
 from superset.reports.notifications.exceptions import NotificationError
 
@@ -43,7 +43,7 @@ class SlackNotification(BaseNotification):  # pylint: disable=too-few-public-met
     def _get_channel(self) -> str:
         return json.loads(self._recipient.recipient_config_json)["target"]
 
-    def _get_format(self) -> ReportEmailFormat:
+    def _get_format(self) -> ReportDataFormat:
         return json.loads(self._recipient.recipient_config_json)["report_format"]
 
     @staticmethod
@@ -63,10 +63,10 @@ class SlackNotification(BaseNotification):  # pylint: disable=too-few-public-met
 
         if (
             self._content.screenshot
-            and self._get_format() == ReportEmailFormat.VISUALIZATION
+            and self._get_format() == ReportDataFormat.VISUALIZATION
         ):
             url = self._content.screenshot.url
-        elif self._content.data and self._get_format() == ReportEmailFormat.DATA:
+        elif self._content.data and self._get_format() == ReportDataFormat.DATA:
             url = self._content.data.url
         if (self._content.data or self._content.screenshot) and url:
             return __(
@@ -82,10 +82,10 @@ class SlackNotification(BaseNotification):  # pylint: disable=too-few-public-met
     def _get_inline_file(self) -> Optional[Union[str, IOBase, bytes]]:
         if (
             self._content.screenshot
-            and self._get_format() == ReportEmailFormat.VISUALIZATION
+            and self._get_format() == ReportDataFormat.VISUALIZATION
         ):
             return self._content.screenshot.image
-        if self._content.data and self._get_format() == ReportEmailFormat.DATA:
+        if self._content.data and self._get_format() == ReportDataFormat.DATA:
             return self._content.data.file
         return None
 

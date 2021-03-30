@@ -24,7 +24,7 @@ from typing import Any, Dict, Optional
 from flask_babel import gettext as __
 
 from superset import app
-from superset.models.reports import ReportEmailFormat, ReportRecipientType
+from superset.models.reports import ReportDataFormat, ReportRecipientType
 from superset.reports.notifications.base import BaseNotification
 from superset.reports.notifications.exceptions import NotificationError
 from superset.utils.core import send_email_smtp
@@ -69,7 +69,7 @@ class EmailNotification(BaseNotification):  # pylint: disable=too-few-public-met
         # and make a message id without the < > in the end
         domain = self._get_smtp_domain()
         msgid = make_msgid(domain)[1:-1]
-        if self._content.data and self._get_format() == ReportEmailFormat.DATA:
+        if self._content.data and self._get_format() == ReportDataFormat.DATA:
             data = {
                 __("%(name)s.csv", name=self._content.name): self._content.data.file
             }
@@ -84,7 +84,7 @@ class EmailNotification(BaseNotification):  # pylint: disable=too-few-public-met
             return EmailContent(body=body, data=data)
         if (
             self._content.screenshot
-            and self._get_format() == ReportEmailFormat.VISUALIZATION
+            and self._get_format() == ReportDataFormat.VISUALIZATION
         ):
             image = {msgid: self._content.screenshot.image}
             body = __(

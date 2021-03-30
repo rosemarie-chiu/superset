@@ -69,12 +69,16 @@ def df_to_escaped_csv(df: pd.DataFrame, **kwargs: Any) -> Any:
     return df.to_csv(**kwargs)
 
 
-def get_chart_csv_data(chart_url: str, auth_cookies: Dict[str, str]) -> Optional[bytes]:
-    opener = urllib.request.build_opener()
-    cookie_str = ";".join([f"{key}={val}" for key, val in auth_cookies.items()])
-    opener.addheaders.append(("Cookie", cookie_str))
-    response = opener.open(chart_url)
-    content = response.read()
+def get_chart_csv_data(
+    chart_url: Optional[str], auth_cookies: Optional[Dict[str, str]] = None
+) -> Optional[bytes]:
+    content = None
+    if chart_url and auth_cookies:
+        opener = urllib.request.build_opener()
+        cookie_str = ";".join([f"{key}={val}" for key, val in auth_cookies.items()])
+        opener.addheaders.append(("Cookie", cookie_str))
+        response = opener.open(chart_url)
+        content = response.read()
     if response.getcode() != 200:
         raise URLError(response.getcode())
     if content:
