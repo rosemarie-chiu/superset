@@ -52,12 +52,17 @@ class SlackNotification(BaseNotification):  # pylint: disable=too-few-public-met
             Error: %(text)s
             """,
             name=name,
+            description=description,
             text=text,
         )
 
     def _get_body(self) -> str:
         if self._content.text:
-            return self._error_template(self._content.name, self._content.description, self._content.text)
+            return self._error_template(
+                self._content.name,
+                self._content.description,
+                self._content.text
+            )
         if self._content.screenshot:
             return __(
                 """
@@ -69,7 +74,7 @@ class SlackNotification(BaseNotification):  # pylint: disable=too-few-public-met
                 description=self._content.description,
                 url=self._content.screenshot.url,
             )
-        return self._error_template(self._content.name, "Unexpected missing screenshot")
+        return self._error_template(self._content.name, self._content.description, "Unexpected missing screenshot")
 
     def _get_inline_screenshot(self) -> Optional[Union[str, IOBase, bytes]]:
         if self._content.screenshot:
