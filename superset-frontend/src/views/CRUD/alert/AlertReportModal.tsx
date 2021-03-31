@@ -411,12 +411,15 @@ const NotificationMethod: FunctionComponent<NotificationMethodProps> = ({
   onUpdate,
   onRemove,
 }) => {
+  const { method, recipients, options, format } = setting || {};
+  const [recipientValue, setRecipientValue] = useState<string>(
+    recipients || '',
+  );
+  const [formatValue, setFormatValue] = useState(format);
+
   if (!setting) {
     return null;
   }
-  const { method, recipients, options, format } = setting;
-  const [recipientValue, setRecipientValue] = useState<string>(recipients);
-  const [formatValue, setFormatValue] = useState<string>(format);
 
   const onFormatChange = (event: any) => {
     const { target } = event;
